@@ -4,7 +4,7 @@ block_cipher = None
 
 
 a = Analysis(['code_solver.py'],
-             pathex=['C:\\Users\\EivindBrate\\PycharmProjects\\InstechCodeSolver'],
+             pathex=['C:\\Users\\eibra\\PycharmProjects\\CodeSolver'],
              binaries=[],
              datas=[],
              hiddenimports=[],
@@ -29,4 +29,4 @@ exe = EXE(pyz,
           strip=False,
           upx=True,
           runtime_tmpdir=None,
-          console=False , icon='instech.ico')
+          console=False , icon='resources\\instech.ico')

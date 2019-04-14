@@ -1,5 +1,5 @@
 # Create onefile executable
-#   pyinstaller --onefile --noconsole --icon=instech.ico --name=InstechCodeSolver_v1_0 code_solver.py
+#   pyinstaller --onefile --noconsole --icon=resources\instech.ico --name=InstechCodeSolver_v1_0 code_solver.py
 
 from PIL import Image, ImageTk, ImageGrab
 from pytesseract import pytesseract
@@ -18,12 +18,19 @@ import configparser
 class CodeSolver:
     should_i_apply = True
 
-    # System parameters
-    root_key = 'system parameters'
-    config = {'set_dpi_awareness': 'True',
-              'transparent_on_lost_focus': 'True',
-              'default_transparency_alpha': '0.4',
-              'set_topmost': 'True'}
+    # Program config
+    config = {
+        'system parameters': {
+            'set_dpi_awareness': 'True',
+            'transparent_on_lost_focus': 'True',
+            'default_transparency_alpha': '0.4',
+            'set_topmost': 'True',
+            'window_width': '700',
+            'window_height': '550',
+            'tesseract_directory': r'C:\Program Files\Tesseract-OCR\tesseract.exe'
+        }
+    }
+    sys_cfg = config['system parameters']  # system parameter short name
     config_parser = None
 
     # Image params/vars
@@ -75,13 +82,10 @@ class CodeSolver:
 
     def __init__(self):
         # Read config
-        try:
-            self.read_config()
-        except:
-            traceback.print_exc()
+        self.read_config()
 
         # Necessary to get PIL to work correctly on high DPI scaling
-        if self.config['set_dpi_awareness'] == 'True':
+        if self.sys_cfg['set_dpi_awareness'] == 'True':
             user32 = windll.user32
             user32.SetProcessDPIAware()
 
@@ -95,39 +99,42 @@ class CodeSolver:
         self.init_gui()
 
     def read_config(self):
-        # Set up parser
-        self.config_parser = configparser.ConfigParser()
-
-        # Read from file
-        self.config_parser.read('config.ini')
-
-        # Read all parameters specified in config
-        print('Reading config')
-        for key in self.config:
-            try:
-                val = self.config_parser[self.root_key][key]
-                self.config[key] = val
-                print('set {} to {}'.format(key, val))
-            except KeyError:
-                pass
-
-    def write_config(self):
-        # List all parameters that should be written
-        self.config_parser.setdefault(self.root_key, {})
-        for key, val in self.config.items():
-            self.config_parser[self.root_key][key] = str(val)
-
-        # Write to file
-        with open('config.ini', 'w') as configfile:
-            self.config_parser.write(configfile)
-
-    def window_close(self):
-        # Place all extra logic before destroy() in try
         try:
-            self.write_config()
+            # Set up parser
+            self.config_parser = configparser.ConfigParser()
+
+            # Read from file
+            self.config_parser.read('config.ini')
+
+            # Read all parameters specified in config
+            print('Reading config')
+            for key, sub_dict in self.config.items():
+                try:
+                    for sub_key in sub_dict:
+                        val = self.config_parser[key][sub_key]
+                        self.config[key][sub_key] = val
+                        print('set config[{}][{}] to {}'.format(key, sub_key, val))
+                except KeyError:
+                    pass
         except:
             traceback.print_exc()
 
+    def write_config(self):
+        # List all parameters that should be written
+        try:
+            for key, sub_dict in self.config.items():
+                self.config_parser.setdefault(key, {})
+                for sub_key, val in sub_dict.items():
+                    self.config_parser[key][sub_key] = str(val)
+
+            # Write to file
+            with open('config.ini', 'w') as configfile:
+                self.config_parser.write(configfile)
+        except:
+            traceback.print_exc()
+
+    def window_close(self):
+        self.write_config()
         self.root.destroy()
 
     def init_gui(self):
@@ -136,12 +143,12 @@ class CodeSolver:
         self.root.report_callback_exception = lambda a, b, c: self.elevate_error()
         self.root.title('Instech Code Solver v1.0 by Eivind Brate Midtun')
         self.root.minsize(700, 550)
-        self.root.geometry('700x550')
-        if self.config['transparent_on_lost_focus'] == 'True':
+        self.root.geometry('{}x{}'.format(self.sys_cfg['window_width'], self.sys_cfg['window_height']))
+        if self.sys_cfg['transparent_on_lost_focus'] == 'True':
             self.root.bind("<FocusIn>", lambda e: self.set_root_alpha(1))
             self.root.bind("<FocusOut>", lambda e: self.set_root_alpha(
-                float(self.config['default_transparency_alpha'])))
-        if self.config['set_topmost'] == 'True':
+                float(self.sys_cfg['default_transparency_alpha'])))
+        if self.sys_cfg['set_topmost'] == 'True':
             self.root.wm_attributes('-topmost', True)
         self.root.protocol("WM_DELETE_WINDOW", self.window_close)
         self.center_window(self.root)
@@ -156,7 +163,7 @@ class CodeSolver:
         self.entry_url = Entry(self.frame_url)
         self.entry_url.insert(0, "https://images.finncdn.no/dynamic/1280w/2019/4/vertical-1/10/4/144/681/364_714666085.jpg")
         btn_grab = Button(self.frame_url, text='screen grab', width=10, command=lambda: self.image_grab())
-        btn_grab.bind("<Enter>", lambda e: self.set_root_alpha(float(self.config['default_transparency_alpha']), 1))
+        btn_grab.bind("<Enter>", lambda e: self.set_root_alpha(float(self.sys_cfg['default_transparency_alpha']), 1))
         btn_grab.bind("<Leave>", lambda e: self.set_root_alpha(1, 2))
         btn_grab.pack(side=RIGHT, anchor=E)
         Button(self.frame_url, text='url grab', width=10,
@@ -267,7 +274,7 @@ class CodeSolver:
                 print('grabbed image x0:{}, y0:{}, x1:{}, y1:{}:'.format(x0, y0, x1, y1))
 
             elif mode == 'from_url':
-                image = 'test_img1.jpg' if self.use_local_image else request.urlopen(self.entry_url.get())
+                image = r'resources\test_img1.jpg' if self.use_local_image else request.urlopen(self.entry_url.get())
                 self.image = Image.open(image)
 
             else:
@@ -305,6 +312,9 @@ class CodeSolver:
         self.lbl_status.configure(text='Status: ' + text, fg=fg)
 
     def redraw(self, rescale_image=True):
+        # Save window size
+        self.sys_cfg['window_width'], self.sys_cfg['window_height'] = self.root.winfo_width(), self.root.winfo_height()
+
         # Check if image has been loaded
         if not self.image:
             return
@@ -415,13 +425,13 @@ class CodeSolver:
 
     def get_data_from_image(self, image):
         try:
-            pytesseract.tesseract_cmd = r'C:\Program Files\Tesseract-OCR\tesseract.exe'
+            pytesseract.tesseract_cmd = self.sys_cfg['tesseract_directory']
             self.bounding_boxes = pytesseract.image_to_boxes(image)
             self.redraw(False)
             return pytesseract.image_to_string(image)
 
         except pytesseract.TesseractNotFoundError:
-            self.set_status('Missing tesseract.exe', 'red')
+            self.set_status('Did not find tesseract.exe at specified directory', 'red')
 
     def translate_and_apply(self, data):
         output_str = ''
