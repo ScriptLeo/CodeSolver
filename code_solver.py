@@ -11,10 +11,16 @@ import traceback
 from urllib import request, error
 from tkinter import Tk, Frame, Label, Entry, TOP, RIGHT, BOTTOM, LEFT, YES, NO, NW, E, W, S, X, BOTH, END, \
     Button, Canvas, Text, DISABLED, NORMAL, ALL, Scale, Y, N, SUNKEN, Radiobutton, IntVar, Checkbutton, BooleanVar
+from ctypes import windll
+import configparser
 
 
 class CodeSolver:
     should_i_apply = True
+
+    # System parameters
+    set_dpi_awareness = True
+    config = None
 
     # Image params/vars
     use_local_image = False
@@ -64,11 +70,40 @@ class CodeSolver:
                        '8': 'B'}
 
     def __init__(self):
+        # Read config
+        self.read_config()
+
+        # Necessary to get PIL to work correctly on high DPI scaling
+        if self.set_dpi_awareness:
+            user32 = windll.user32
+            user32.SetProcessDPIAware()
+
+        # Load and structure lookup
         self.ascii_lookup = {}
         for row in ascii_table:
             row = row.split(',')
             self.ascii_lookup[row[3].upper()] = row[4]
+
+        # Start gui
         self.init_gui()
+
+    def read_config(self):
+        # Set up parser
+        self.config = configparser.ConfigParser()
+
+        # Read from file
+        self.config.read('config.ini')
+
+        # List all parameters that should be read
+        self.set_dpi_awareness = self.config['system parameters']['set_dpi_awareness']
+
+    def write_config(self):
+        # List all parameters that should be written
+        self.config['system parameters'] = {'set_dpi_awareness': self.set_dpi_awareness}
+
+        # Write to file
+        with open('config.ini', 'w') as configfile:
+            self.config.write(configfile)
 
     def init_gui(self):
         # Root config
@@ -78,7 +113,8 @@ class CodeSolver:
         self.root.minsize(700, 550)
         self.root.geometry('700x550')
         self.root.bind("<FocusIn>", lambda e: self.set_root_alpha(1))
-        self.root.bind("<FocusOut>", lambda e: self.set_root_alpha(0.5))
+        self.root.bind("<FocusOut>", lambda e: self.set_root_alpha(0.3))
+        self.root.wm_attributes('-topmost', True)
         self.center_window(self.root)
 
         # Main frame
@@ -199,7 +235,7 @@ class CodeSolver:
 
                 bbox = (x0, y0, x1, y1)
                 self.image = ImageGrab.grab(bbox)
-                print('grabbed image')
+                print('grabbed image x0:{}, y0:{}, x1:{}, y1:{}:'.format(x0, y0, x1, y1))
 
             elif mode == 'from_url':
                 image = 'test_img1.jpg' if self.use_local_image else request.urlopen(self.entry_url.get())
