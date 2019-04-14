@@ -19,8 +19,12 @@ class CodeSolver:
     should_i_apply = True
 
     # System parameters
-    set_dpi_awareness = True
-    config = None
+    root_key = 'system parameters'
+    config = {'set_dpi_awareness': 'True',
+              'transparent_on_lost_focus': 'True',
+              'default_transparency_alpha': '0.4',
+              'set_topmost': 'True'}
+    config_parser = None
 
     # Image params/vars
     use_local_image = False
@@ -71,10 +75,13 @@ class CodeSolver:
 
     def __init__(self):
         # Read config
-        self.read_config()
+        try:
+            self.read_config()
+        except:
+            traceback.print_exc()
 
         # Necessary to get PIL to work correctly on high DPI scaling
-        if self.set_dpi_awareness:
+        if self.config['set_dpi_awareness'] == 'True':
             user32 = windll.user32
             user32.SetProcessDPIAware()
 
@@ -89,21 +96,39 @@ class CodeSolver:
 
     def read_config(self):
         # Set up parser
-        self.config = configparser.ConfigParser()
+        self.config_parser = configparser.ConfigParser()
 
         # Read from file
-        self.config.read('config.ini')
+        self.config_parser.read('config.ini')
 
-        # List all parameters that should be read
-        self.set_dpi_awareness = self.config['system parameters']['set_dpi_awareness']
+        # Read all parameters specified in config
+        print('Reading config')
+        for key in self.config:
+            try:
+                val = self.config_parser[self.root_key][key]
+                self.config[key] = val
+                print('set {} to {}'.format(key, val))
+            except KeyError:
+                pass
 
     def write_config(self):
         # List all parameters that should be written
-        self.config['system parameters'] = {'set_dpi_awareness': self.set_dpi_awareness}
+        self.config_parser.setdefault(self.root_key, {})
+        for key, val in self.config.items():
+            self.config_parser[self.root_key][key] = str(val)
 
         # Write to file
         with open('config.ini', 'w') as configfile:
-            self.config.write(configfile)
+            self.config_parser.write(configfile)
+
+    def window_close(self):
+        # Place all extra logic before destroy() in try
+        try:
+            self.write_config()
+        except:
+            traceback.print_exc()
+
+        self.root.destroy()
 
     def init_gui(self):
         # Root config
@@ -112,9 +137,13 @@ class CodeSolver:
         self.root.title('Instech Code Solver v1.0 by Eivind Brate Midtun')
         self.root.minsize(700, 550)
         self.root.geometry('700x550')
-        self.root.bind("<FocusIn>", lambda e: self.set_root_alpha(1))
-        self.root.bind("<FocusOut>", lambda e: self.set_root_alpha(0.3))
-        self.root.wm_attributes('-topmost', True)
+        if self.config['transparent_on_lost_focus'] == 'True':
+            self.root.bind("<FocusIn>", lambda e: self.set_root_alpha(1))
+            self.root.bind("<FocusOut>", lambda e: self.set_root_alpha(
+                float(self.config['default_transparency_alpha'])))
+        if self.config['set_topmost'] == 'True':
+            self.root.wm_attributes('-topmost', True)
+        self.root.protocol("WM_DELETE_WINDOW", self.window_close)
         self.center_window(self.root)
 
         # Main frame
@@ -127,7 +156,7 @@ class CodeSolver:
         self.entry_url = Entry(self.frame_url)
         self.entry_url.insert(0, "https://images.finncdn.no/dynamic/1280w/2019/4/vertical-1/10/4/144/681/364_714666085.jpg")
         btn_grab = Button(self.frame_url, text='screen grab', width=10, command=lambda: self.image_grab())
-        btn_grab.bind("<Enter>", lambda e: self.set_root_alpha(0.3, 1))
+        btn_grab.bind("<Enter>", lambda e: self.set_root_alpha(float(self.config['default_transparency_alpha']), 1))
         btn_grab.bind("<Leave>", lambda e: self.set_root_alpha(1, 2))
         btn_grab.pack(side=RIGHT, anchor=E)
         Button(self.frame_url, text='url grab', width=10,
