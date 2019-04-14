@@ -8,5 +8,5 @@
 
 #Troubleshooting
 -Check error.log
--If program is complaining that the directory of tesseract.exe and it is installed on your computer, open config.ini and verify that the specified tesseract directory matches your install location, else change it to the correct directory and save config.ini.
+-If program is complaining that the directory of tesseract.exe and it is installed on your computer, open config.ini and verify that the specified tesseract directory under "tesseract_directory" matches your install location; else change it to the correct directory and save config.ini.
 -Attempt deleting config.ini
