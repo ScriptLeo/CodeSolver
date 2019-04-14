@@ -1,5 +1,5 @@
 #Quickstart
--Install tesseract-ocr-w64-setup-v4.1.0.20190314 (Source: https://github.com/tesseract-ocr/tesseract) in its default location "C:\Program Files\Tesseract-OCR\tesseract.exe"
+-Install tesseract-ocr-w64-setup-v4.1.0.20190314 (Source: https://github.com/tesseract-ocr/tesseract) in its default location "C:\Program Files\Tesseract-OCR\tesseract.exe". The tesseract software is licenced under http://www.apache.org/licenses/LICENSE-2.0.
 -Run InstechCodeSolver.exe
 -Right- click any image with hexadecimal code in your web browser and select "copy image address" or equivalent
 -Paste image address in the CodeSolver URL field
