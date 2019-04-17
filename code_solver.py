@@ -22,15 +22,19 @@ class CodeSolver:
     config = {
         'system parameters': {
             'set_dpi_awareness': 'True',
+            'tesseract_directory': r'C:\Program Files\Tesseract-OCR\tesseract.exe'
+        },
+        'window settings': {
             'transparent_on_lost_focus': 'True',
             'default_transparency_alpha': '0.4',
             'set_topmost': 'True',
             'window_width': '700',
             'window_height': '550',
-            'tesseract_directory': r'C:\Program Files\Tesseract-OCR\tesseract.exe'
+            'center_image_on_canvas': 'True'
         }
     }
-    sys_cfg = config['system parameters']  # system parameter short name
+    sys_cfg = config['system parameters']  # Short names
+    win_cfg = config['window settings']
     config_parser = None
 
     # Image params/vars
@@ -143,12 +147,12 @@ class CodeSolver:
         self.root.report_callback_exception = lambda a, b, c: self.elevate_error()
         self.root.title('Instech Code Solver v1.0 by Eivind Brate Midtun')
         self.root.minsize(700, 550)
-        self.root.geometry('{}x{}'.format(self.sys_cfg['window_width'], self.sys_cfg['window_height']))
-        if self.sys_cfg['transparent_on_lost_focus'] == 'True':
+        self.root.geometry('{}x{}'.format(self.win_cfg['window_width'], self.win_cfg['window_height']))
+        if self.win_cfg['transparent_on_lost_focus'] == 'True':
             self.root.bind("<FocusIn>", lambda e: self.set_root_alpha(1))
             self.root.bind("<FocusOut>", lambda e: self.set_root_alpha(
-                float(self.sys_cfg['default_transparency_alpha'])))
-        if self.sys_cfg['set_topmost'] == 'True':
+                float(self.win_cfg['default_transparency_alpha'])))
+        if self.win_cfg['set_topmost'] == 'True':
             self.root.wm_attributes('-topmost', True)
         self.root.protocol("WM_DELETE_WINDOW", self.window_close)
         self.center_window(self.root)
@@ -163,7 +167,7 @@ class CodeSolver:
         self.entry_url = Entry(self.frame_url)
         self.entry_url.insert(0, "https://images.finncdn.no/dynamic/1280w/2019/4/vertical-1/10/4/144/681/364_714666085.jpg")
         btn_grab = Button(self.frame_url, text='screen grab', width=10, command=lambda: self.image_grab())
-        btn_grab.bind("<Enter>", lambda e: self.set_root_alpha(float(self.sys_cfg['default_transparency_alpha']), 1))
+        btn_grab.bind("<Enter>", lambda e: self.set_root_alpha(float(self.win_cfg['default_transparency_alpha']), 1))
         btn_grab.bind("<Leave>", lambda e: self.set_root_alpha(1, 2))
         btn_grab.pack(side=RIGHT, anchor=E)
         Button(self.frame_url, text='url grab', width=10,
@@ -313,7 +317,7 @@ class CodeSolver:
 
     def redraw(self, rescale_image=True):
         # Save window size
-        self.sys_cfg['window_width'], self.sys_cfg['window_height'] = self.root.winfo_width(), self.root.winfo_height()
+        self.win_cfg['window_width'], self.win_cfg['window_height'] = self.root.winfo_width(), self.root.winfo_height()
 
         # Check if image has been loaded
         if not self.image:
@@ -344,8 +348,11 @@ class CodeSolver:
                 self.image_scale = self.image_width / w
 
                 # Calculate offsets
-                self.image_x_offset = (self.canvas_width - self.image_width) // 2
-                self.image_y_offset = (self.canvas_height - self.image_height) // 2
+                if self.win_cfg['center_image_on_canvas'] == 'True':
+                    self.image_x_offset = (self.canvas_width - self.image_width) // 2
+                    self.image_y_offset = (self.canvas_height - self.image_height) // 2
+                else:
+                    self.image_x_offset, self.image_y_offset = 0, 0
 
                 # Resize image
                 self.img = ImageTk.PhotoImage(self.image.resize((self.image_width, self.image_height)))
