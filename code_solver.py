@@ -36,7 +36,8 @@ class CodeSolver:
         },
         'canvas settings': {
             'resize_threshold': 1,  # Prevents resizing on small canvas changes},
-            'center_image_on_canvas': True
+            'center_image_on_canvas': True,
+            'canvas_update_delay': 250
         }
     }
     sys_cfg = config['system parameters']  # Short names
@@ -68,7 +69,8 @@ class CodeSolver:
     image_y_offset = None
     bounding_boxes = None
     last_resize = None
-    pending_boxes = False
+    pending_boxes: BooleanVar = None
+    pending_redraw: BooleanVar = None
 
     # Settings
     render_boxes = None
@@ -84,6 +86,9 @@ class CodeSolver:
     txt_output = None
     scale_slider = None
     transparency_overlay = None
+
+    # Program variables
+    pending_timed_highlight = False
 
     # Lookup
     ascii_lookup = None
@@ -325,6 +330,10 @@ class CodeSolver:
         frame_output.pack(side=BOTTOM, anchor=S, fill=X, expand=NO, padx=20)
         frame_input.pack(side=TOP, expand=YES, fill=BOTH, padx=20)
 
+        # Init other tk variables
+        self.pending_boxes = BooleanVar()
+        self.pending_redraw = BooleanVar()
+
         # Start mainloop
         self.root.mainloop()
 
@@ -405,12 +414,14 @@ class CodeSolver:
 
     def timed_highlight(self, parent, widget):
         # Initiates a timed highlight
-        widget.configure(highlightcolor='red', highlightbackground='red', highlightthickness=2)
-        parent.after(1500, lambda: self.highlight_off(widget))
+        if not self.pending_timed_highlight:
+            self.pending_timed_highlight = True
+            widget.configure(highlightcolor='red', highlightbackground='red', highlightthickness=2)
+            parent.after(1500, lambda: self.highlight_off(widget))
 
-    @staticmethod
-    def highlight_off(widget):
+    def highlight_off(self, widget):
         # Toggles off the highlight after a set amount of time
+        self.pending_timed_highlight = False
         widget.configure(highlightthickness=0)
 
     def set_status(self, text, fg):
@@ -423,9 +434,6 @@ class CodeSolver:
         # Check if image has been loaded
         if not self.image:
             return
-
-        # Log last resize
-        self.last_resize = datetime.now()
 
         if rescale_image:
             # Read new canvas size
@@ -475,22 +483,38 @@ class CodeSolver:
                                      image=self.transparency_overlay, anchor='nw')
 
         # Redraw bounding boxes if there are any
+        self.last_resize = datetime.now()
         if self.render_boxes.get():
             self.call_boxing()
 
+    def call_delayed_func(self, delay, func, limiter):
+        # TODO: Finish this
+        """
+        :param delay: Delay before update.
+        :param func: Function to be called after set time.
+        :param limiter: BooleanVar() that limits amount of instances to a single.
+        :return:
+        """
+        # Wait by updating till after user has stopped resizing
+        if delay < (datetime.now() - self.last_resize).seconds:
+            func()
+        elif not limiter:
+            limiter.set(True)
+            self.call_delayed_func(delay, func, limiter)
+
     def call_boxing(self):
         # Start one update worker for box updating
-        if not self.pending_boxes:
-            self.pending_boxes = True
-            self.root.after(500, self.delay_boxing)
+        if not self.pending_boxes.get():
+            self.pending_boxes.set(True)
+            self.root.after(self.can_cfg['canvas_update_delay'], self.delay_boxing)
 
     def delay_boxing(self):
         # Wait by updating till after user has stopped resizing
-        if 0.25 < (datetime.now() - self.last_resize).seconds:
+        if self.can_cfg['canvas_update_delay'] < (datetime.now() - self.last_resize).seconds:
             self.draw_boxes_on_canvas()
-            self.pending_boxes = False
+            self.pending_boxes.set(False)
         else:
-            self.root.after(250, self.delay_boxing)
+            self.root.after(self.can_cfg['canvas_update_delay'], self.delay_boxing)
 
     def draw_boxes_on_canvas(self):
         if not self.bounding_boxes:
