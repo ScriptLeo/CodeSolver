@@ -510,7 +510,7 @@ class CodeSolver:
 
     def delay_boxing(self):
         # Wait by updating till after user has stopped resizing
-        if self.can_cfg['canvas_update_delay'] < (datetime.now() - self.last_resize).seconds:
+        if self.can_cfg['canvas_update_delay']*1000 < (datetime.now() - self.last_resize).microseconds:
             self.draw_boxes_on_canvas()
             self.pending_boxes.set(False)
         else:
